@@ -51,19 +51,29 @@ def get_ai_response(clients, prompt, model_type, context=""):
     try:
         logger.info(f"Getting AI response using {model_type}")
         
+        # Add formatting instructions to the prompt
+        formatting_instructions = """
+        Please structure your response with clear paragraphs and sections.
+        - Use blank lines between paragraphs
+        - Use bullet points or numbers for lists
+        - Use headers for different sections (if applicable)
+        - Keep sentences concise and clear
+        """
+        
+        formatted_prompt = f"{prompt}\n\n{formatting_instructions}\n\nContext: {context}"
+        
         if model_type == "anthropic":
-            # Fixed prompt formatting for Anthropic
             messages = [
                 {
                     "role": "user",
-                    "content": f"{prompt}\n\nContext: {context}"
+                    "content": formatted_prompt
                 }
             ]
             
             response = clients['anthropic'].messages.create(
                 model="claude-3-sonnet-20240229",
                 messages=messages,
-                max_tokens=150
+                max_tokens=1000
             )
             return response.content[0].text
             
@@ -81,14 +91,14 @@ def get_ai_response(clients, prompt, model_type, context=""):
                     "messages": [
                         {
                             "role": "system",
-                            "content": "You are an expert analyst in the travel industry."
+                            "content": "You are an expert analyst in the travel industry. " + formatting_instructions
                         },
                         {
                             "role": "user",
-                            "content": f"{prompt}\n\nContext: {context}"
+                            "content": formatted_prompt
                         }
                     ],
-                    "max_tokens_to_sample": 150
+                    "max_tokens_to_sample": 1000
                 },
                 timeout=30
             )
@@ -102,15 +112,19 @@ def get_ai_response(clients, prompt, model_type, context=""):
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert analyst in the travel industry."
+                        "content": "You are an expert analyst in the travel industry. " + formatting_instructions
                     },
                     {
                         "role": "user",
-                        "content": f"{prompt}\n\nContext: {context}"
+                        "content": formatted_prompt
                     }
                 ],
-                max_tokens=1500
+                max_tokens=4096,
+                temperature=0.7,
+                presence_penalty=0.1,
+                frequency_penalty=0.1
             )
+            
             return response.choices[0].message.content
             
     except requests.exceptions.RequestException as e:
@@ -268,5 +282,5 @@ app.config['JSON_SORT_KEYS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
 
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5003))
     app.run(host='0.0.0.0', port=port)
