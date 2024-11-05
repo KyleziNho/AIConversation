@@ -52,12 +52,20 @@ def get_ai_response(clients, prompt, model_type, context=""):
         logger.info(f"Getting AI response using {model_type}")
         
         if model_type == "anthropic":
-            response = clients['anthropic'].completions.create(
+            # Fixed prompt formatting for Anthropic
+            messages = [
+                {
+                    "role": "user",
+                    "content": f"{prompt}\n\nContext: {context}"
+                }
+            ]
+            
+            response = clients['anthropic'].messages.create(
                 model="claude-3-sonnet-20240229",
-                prompt=f"{prompt}\n\nContext: {context}",
-                max_tokens_to_sample=150  # Specify a limit for tokens
+                messages=messages,
+                max_tokens=150
             )
-            return response['completion']  # Adjust if necessary based on response format
+            return response.content[0].text
             
         elif model_type == "llama":
             headers = {
@@ -80,12 +88,12 @@ def get_ai_response(clients, prompt, model_type, context=""):
                             "content": f"{prompt}\n\nContext: {context}"
                         }
                     ],
-                    "max_tokens_to_sample": 150  # Adding max tokens for llama model
+                    "max_tokens_to_sample": 150
                 },
                 timeout=30
             )
             
-            response.raise_for_status()  # Raise an exception for bad status codes
+            response.raise_for_status()
             return response.json()['choices'][0]['message']['content']
                 
         else:  # OpenAI
