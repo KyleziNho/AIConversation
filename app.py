@@ -8,8 +8,11 @@ import requests
 import json
 from datetime import datetime
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize Flask app with proper static folder configuration
+app = Flask(__name__, 
+            static_url_path='',
+            static_folder='templates',
+            template_folder='templates')
 
 # Load environment variables
 load_dotenv()
@@ -21,12 +24,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize API clients
 def get_api_clients():
     try:
-        anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        perplexity_api_key = os.getenv("PERPLEXITY_API_KEY")
+        anthropic_client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        perplexity_api_key = os.environ.get("PERPLEXITY_API_KEY")
         
         return {
             'anthropic': anthropic_client,
@@ -53,6 +55,9 @@ def get_ai_response(clients, prompt, model_type, context=""):
             return response.content[0].text
             
         elif model_type == "llama":
+            if not clients.get('perplexity_key'):
+                return "Error: Perplexity API key not found"
+                
             headers = {
                 "Authorization": f"Bearer {clients['perplexity_key']}",
                 "Content-Type": "application/json"
@@ -163,6 +168,11 @@ Focus Areas:
         logger.error(f"Error in get_perplexity_insights: {str(e)}")
         return f"Error in research: {str(e)}"
 
+# Health check endpoint for Vercel
+@app.route('/api/healthcheck', methods=['GET'])
+def healthcheck():
+    return jsonify({"status": "healthy"}), 200
+
 @app.route('/')
 def index():
     try:
@@ -228,10 +238,20 @@ def simulate_debate(topic):
         logger.error(f"Error in simulate_debate: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# Required for Vercel
-app.config['TEMPLATES_AUTO_RELOAD'] = True
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    return jsonify({"error": "Not found"}), 404
 
-# Development server
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({"error": "Internal server error"}), 500
+
+# Configure for production
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['JSON_SORT_KEYS'] = False
+
+# For local development only
 if __name__ == "__main__":
-    port = int(os.getenv('PORT', 5000))
+    port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
