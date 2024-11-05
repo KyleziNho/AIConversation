@@ -26,18 +26,26 @@ logger = logging.getLogger(__name__)
 
 def get_api_clients():
     try:
-        anthropic_client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-        openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-        perplexity_api_key = os.environ.get("PERPLEXITY_API_KEY")
+        # Explicitly check for API keys
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        perplexity_key = os.environ.get("PERPLEXITY_API_KEY")
         
+        if not all([anthropic_key, openai_key, perplexity_key]):
+            missing_keys = []
+            if not anthropic_key: missing_keys.append("ANTHROPIC_API_KEY")
+            if not openai_key: missing_keys.append("OPENAI_API_KEY")
+            if not perplexity_key: missing_keys.append("PERPLEXITY_API_KEY")
+            raise Exception(f"Missing API keys: {', '.join(missing_keys)}")
+
         return {
-            'anthropic': anthropic_client,
-            'openai': openai_client,
-            'perplexity_key': perplexity_api_key
+            'anthropic': Anthropic(api_key=anthropic_key),
+            'openai': OpenAI(api_key=openai_key),
+            'perplexity_key': perplexity_key
         }
     except Exception as e:
         logger.error(f"Error initializing API clients: {str(e)}")
-        return None
+        raise
 
 def get_ai_response(clients, prompt, model_type, context=""):
     try:
@@ -55,9 +63,6 @@ def get_ai_response(clients, prompt, model_type, context=""):
             return response.content[0].text
             
         elif model_type == "llama":
-            if not clients.get('perplexity_key'):
-                return "Error: Perplexity API key not found"
-                
             headers = {
                 "Authorization": f"Bearer {clients['perplexity_key']}",
                 "Content-Type": "application/json"
@@ -82,10 +87,8 @@ def get_ai_response(clients, prompt, model_type, context=""):
                 timeout=30
             )
             
-            if response.status_code == 200:
-                return response.json()['choices'][0]['message']['content']
-            else:
-                raise Exception(f"Perplexity API error: {response.status_code} - {response.text}")
+            response.raise_for_status()  # Raise an exception for bad status codes
+            return response.json()['choices'][0]['message']['content']
                 
         else:  # OpenAI
             response = clients['openai'].chat.completions.create(
@@ -104,17 +107,17 @@ def get_ai_response(clients, prompt, model_type, context=""):
             )
             return response.choices[0].message.content
             
+    except requests.exceptions.RequestException as e:
+        logger.error(f"API request error in get_ai_response: {str(e)}")
+        raise Exception(f"API request failed: {str(e)}")
     except Exception as e:
         logger.error(f"Error in get_ai_response: {str(e)}")
-        return f"Error getting response: {str(e)}"
+        raise
 
 def get_perplexity_insights(perplexity_key, topic):
     try:
         logger.info(f"Getting Perplexity insights for topic: {topic}")
         
-        if not perplexity_key:
-            return "Error: Perplexity API key not found"
-            
         headers = {
             "Authorization": f"Bearer {perplexity_key}",
             "Content-Type": "application/json"
@@ -157,21 +160,36 @@ Focus Areas:
             timeout=30
         )
         
-        if response.status_code == 200:
-            return response.json()['choices'][0]['message']['content']
-        else:
-            error_message = f"Perplexity API error: {response.status_code} - {response.text}"
-            logger.error(error_message)
-            return f"Error getting research: {error_message}"
+        response.raise_for_status()
+        return response.json()['choices'][0]['message']['content']
             
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Perplexity API request error: {str(e)}")
+        raise Exception(f"Perplexity API request failed: {str(e)}")
     except Exception as e:
         logger.error(f"Error in get_perplexity_insights: {str(e)}")
-        return f"Error in research: {str(e)}"
+        raise
 
-# Health check endpoint for Vercel
 @app.route('/api/healthcheck', methods=['GET'])
 def healthcheck():
-    return jsonify({"status": "healthy"}), 200
+    try:
+        # Check if API keys are set
+        keys_status = {
+            "ANTHROPIC_API_KEY": bool(os.environ.get("ANTHROPIC_API_KEY")),
+            "OPENAI_API_KEY": bool(os.environ.get("OPENAI_API_KEY")),
+            "PERPLEXITY_API_KEY": bool(os.environ.get("PERPLEXITY_API_KEY"))
+        }
+        
+        return jsonify({
+            "status": "healthy",
+            "api_keys": keys_status,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
 
 @app.route('/')
 def index():
@@ -179,7 +197,7 @@ def index():
         return render_template('index.html')
     except Exception as e:
         logger.error(f"Error rendering index: {str(e)}")
-        return str(e), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/simulate_debate/<topic>', methods=['POST'])
 def simulate_debate(topic):
@@ -188,8 +206,6 @@ def simulate_debate(topic):
     try:
         # Get API clients
         clients = get_api_clients()
-        if not clients:
-            return jsonify({"error": "Failed to initialize API clients"}), 500
 
         # Get initial research using Perplexity with Llama model
         research_insights = {
@@ -236,20 +252,29 @@ def simulate_debate(topic):
 
     except Exception as e:
         logger.error(f"Error in simulate_debate: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": "Simulation Error",
+            "message": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }), 500
 
 # Error handlers
 @app.errorhandler(404)
 def not_found_error(error):
-    return jsonify({"error": "Not found"}), 404
+    return jsonify({"error": "Not found", "path": request.path}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    return jsonify({"error": "Internal server error"}), 500
+    return jsonify({
+        "error": "Internal server error",
+        "message": str(error),
+        "timestamp": datetime.utcnow().isoformat()
+    }), 500
 
 # Configure for production
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['JSON_SORT_KEYS'] = False
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
 
 # For local development only
 if __name__ == "__main__":

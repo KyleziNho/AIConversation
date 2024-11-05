@@ -190,13 +190,13 @@
 
                 try {
                     console.log('Making fetch request...');
-                    const response = await fetch(`/simulate_debate/${encodeURIComponent(topic)}`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        }
-                    });
+                    const response = await fetch(`/api/simulate_debate/${encodeURIComponent(topic)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
 
                     console.log('Response received:', response.status);
                     if (!response.ok) {
