@@ -52,15 +52,11 @@ def get_ai_response(clients, prompt, model_type, context=""):
         logger.info(f"Getting AI response using {model_type}")
         
         if model_type == "anthropic":
-            response = clients['anthropic'].messages.create(
+            response = clients['anthropic'].completions.create(
                 model="claude-3-sonnet-20240229",
-                max_tokens=1500,
-                messages=[{
-                    "role": "user",
-                    "content": f"{prompt}\n\nContext: {context}"
-                }]
+                prompt=f"{prompt}\n\nContext: {context}"
             )
-            return response.content[0].text
+            return response['completion']  # Adjust if necessary based on response format
             
         elif model_type == "llama":
             headers = {
