@@ -174,69 +174,7 @@
             const researchInsights = document.getElementById('research-insights');
             const debateContainer = document.getElementById('debate-container');
 
-            startDebateBtn.addEventListener('click', async function() {
-                const topic = debateTopicInput.value.trim();
-                if (!topic) {
-                    alert('Please enter a debate topic');
-                    return;
-                }
-
-                console.log('Starting debate for topic:', topic);
-                
-                // Show loading state
-                loadingIndicator.classList.remove('hidden');
-                startDebateBtn.disabled = true;
-                debateResults.classList.add('hidden');
-
-                try {
-                    console.log('Making fetch request...');
-                    const response = await fetch(`/api/simulate_debate/${encodeURIComponent(topic)}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
-                });
-
-                    console.log('Response received:', response.status);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const data = await response.json();
-                    console.log('Data received:', data);
-
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-
-                    // Display research insights with Perplexity icon
-                    researchInsights.innerHTML = Object.entries(data.research_insights || {})
-    .map(([key, value]) => `
-        <div class="mb-4">
-            <div class="flex items-center mb-2">
-                <h3 class="font-semibold text-lg capitalize">${key.replace('_', ' ')}</h3>
-                ${getAIProviderIcon('perplexity')}
-            </div>
-            <p class="text-gray-700">${value}</p>
-        </div>
-    `)
-    .join('');
-
-                    // Display analysis chain with AI provider icons
-                    debateContainer.innerHTML = (data.analysis_chain || [])
-    .map(entry => `
-        <div class="border-l-4 border-blue-500 pl-4 py-2">
-            <div class="flex items-center mb-2">
-                <span class="font-semibold text-lg">${entry.expert}</span>
-                ${getAIProviderIcon(entry.model)}
-            </div>
-            <p class="text-gray-700">${entry.contribution}</p>
-        </div>
-    `)
-    .join('');
-
-    function getAIProviderIcon(model) {
+            function getAIProviderIcon(model) {
                 const icons = {
                     anthropic: `
                         <div class="flex items-center ml-2" title="Powered by Claude 3 Sonnet">
@@ -258,17 +196,78 @@
                                 <circle cx="50" cy="50" r="50" fill="#6B46C1"/>
                                 <path fill="white" d="M50 25L65 50L50 75L35 50L50 25Z"/>
                             </svg>
+                        </div>`,
+                    perplexity: `
+                        <div class="flex items-center ml-2" title="Powered by Perplexity AI">
+                            <svg class="ai-provider-icon" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="50" fill="#6B46C1"/>
+                                <path fill="white" d="M50 25L65 50L50 75L35 50L50 25Z"/>
+                            </svg>
                         </div>`
                 };
                 
                 return icons[model] || '';
             }
 
+            startDebateBtn.addEventListener('click', async function() {
+                const topic = debateTopicInput.value.trim();
+                if (!topic) {
+                    alert('Please enter a debate topic');
+                    return;
+                }
+
+                // Show loading state
+                loadingIndicator.classList.remove('hidden');
+                startDebateBtn.disabled = true;
+                debateResults.classList.add('hidden');
+
+                try {
+                    const response = await fetch('/api/debate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ topic: topic })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'An error occurred');
+                    }
+
+                    // Display research insights
+                    researchInsights.innerHTML = Object.entries(data.research_insights || {})
+                        .map(([key, value]) => `
+                            <div class="mb-4">
+                                <div class="flex items-center mb-2">
+                                    <h3 class="font-semibold text-lg capitalize">${key.replace('_', ' ')}</h3>
+                                    ${getAIProviderIcon('perplexity')}
+                                </div>
+                                <p class="text-gray-700">${value}</p>
+                            </div>
+                        `)
+                        .join('');
+
+                    // Display debate chain
+                    debateContainer.innerHTML = (data.analysis_chain || [])
+                        .map(entry => `
+                            <div class="border-l-4 border-blue-500 pl-4 py-2">
+                                <div class="flex items-center mb-2">
+                                    <span class="font-semibold text-lg">${entry.expert}</span>
+                                    ${getAIProviderIcon(entry.model)}
+                                </div>
+                                <p class="text-gray-700">${entry.contribution}</p>
+                            </div>
+                        `)
+                        .join('');
+
                     // Show results
                     debateResults.classList.remove('hidden');
                 } catch (error) {
                     console.error('Error:', error);
-                    alert(`An error occurred: ${error.message}`);
+                    alert(error.message || 'An error occurred');
                 } finally {
                     loadingIndicator.classList.add('hidden');
                     startDebateBtn.disabled = false;
@@ -277,14 +276,16 @@
 
             saveDebateBtn.addEventListener('click', function() {
                 const debateContent = document.getElementById('debate-results').innerHTML;
+                const topic = debateTopicInput.value.trim();
                 const blob = new Blob([`
                     <html>
                         <head>
                             <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-                            <title>Travel Industry Debate - ${new Date().toLocaleDateString()}</title>
+                            <title>Travel Industry Debate - ${topic} - ${new Date().toLocaleDateString()}</title>
                         </head>
                         <body class="bg-gray-50 p-8">
                             <div class="container mx-auto">
+                                <h1 class="text-3xl font-bold mb-6">Topic: ${topic}</h1>
                                 ${debateContent}
                             </div>
                         </body>

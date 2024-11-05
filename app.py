@@ -170,27 +170,6 @@ Focus Areas:
         logger.error(f"Error in get_perplexity_insights: {str(e)}")
         raise
 
-@app.route('/api/healthcheck', methods=['GET'])
-def healthcheck():
-    try:
-        # Check if API keys are set
-        keys_status = {
-            "ANTHROPIC_API_KEY": bool(os.environ.get("ANTHROPIC_API_KEY")),
-            "OPENAI_API_KEY": bool(os.environ.get("OPENAI_API_KEY")),
-            "PERPLEXITY_API_KEY": bool(os.environ.get("PERPLEXITY_API_KEY"))
-        }
-        
-        return jsonify({
-            "status": "healthy",
-            "api_keys": keys_status,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "error": str(e)
-        }), 500
-
 @app.route('/')
 def index():
     try:
@@ -199,11 +178,17 @@ def index():
         logger.error(f"Error rendering index: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/simulate_debate/<topic>', methods=['POST'])
-def simulate_debate(topic):
-    logger.info(f"Starting debate simulation for topic: {topic}")
-    
+@app.route('/api/debate', methods=['POST'])
+def simulate_debate():
     try:
+        # Get topic from JSON body
+        data = request.get_json()
+        if not data or 'topic' not in data:
+            return jsonify({"error": "Missing topic in request"}), 400
+            
+        topic = data['topic']
+        logger.info(f"Starting debate simulation for topic: {topic}")
+        
         # Get API clients
         clients = get_api_clients()
 
@@ -276,7 +261,6 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['JSON_SORT_KEYS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
 
-# For local development only
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
