@@ -54,7 +54,8 @@ def get_ai_response(clients, prompt, model_type, context=""):
         if model_type == "anthropic":
             response = clients['anthropic'].completions.create(
                 model="claude-3-sonnet-20240229",
-                prompt=f"{prompt}\n\nContext: {context}"
+                prompt=f"{prompt}\n\nContext: {context}",
+                max_tokens_to_sample=150  # Specify a limit for tokens
             )
             return response['completion']  # Adjust if necessary based on response format
             
@@ -78,7 +79,8 @@ def get_ai_response(clients, prompt, model_type, context=""):
                             "role": "user",
                             "content": f"{prompt}\n\nContext: {context}"
                         }
-                    ]
+                    ],
+                    "max_tokens_to_sample": 150  # Adding max tokens for llama model
                 },
                 timeout=30
             )
