@@ -51,81 +51,95 @@ def get_ai_response(clients, prompt, model_type, context=""):
     try:
         logger.info(f"Getting AI response using {model_type}")
         
-        # Add formatting instructions to the prompt
-        formatting_instructions = """
-        Please structure your response with clear paragraphs and sections.
-        - Use blank lines between paragraphs
-        - Use bullet points or numbers for lists
-        - Use headers for different sections (if applicable)
-        - Keep sentences concise and clear
-        """
+        max_retries = 3
+        base_delay = 1
         
-        formatted_prompt = f"{prompt}\n\n{formatting_instructions}\n\nContext: {context}"
-        
-        if model_type == "anthropic":
-            messages = [
-                {
-                    "role": "user",
-                    "content": formatted_prompt
-                }
-            ]
-            
-            response = clients['anthropic'].messages.create(
-                model="claude-3-sonnet-20240229",
-                messages=messages,
-                max_tokens=1000
-            )
-            return response.content[0].text
-            
-        elif model_type == "llama":
-            headers = {
-                "Authorization": f"Bearer {clients['perplexity_key']}",
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.post(
-                "https://api.perplexity.ai/chat/completions",
-                headers=headers,
-                json={
-                    "model": "llama-3.1-sonar-small-128k-online",
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": "You are an expert analyst in the travel industry. " + formatting_instructions
-                        },
-                        {
-                            "role": "user",
-                            "content": formatted_prompt
-                        }
-                    ],
-                    "max_tokens_to_sample": 1000
-                },
-                timeout=30
-            )
-            
-            response.raise_for_status()
-            return response.json()['choices'][0]['message']['content']
-                
-        else:  # OpenAI
-            response = clients['openai'].chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert analyst in the travel industry. " + formatting_instructions
-                    },
-                    {
-                        "role": "user",
-                        "content": formatted_prompt
+        for attempt in range(max_retries):
+            try:
+                if model_type == "anthropic":
+                    # Try the new messages API first
+                    try:
+                        messages = [
+                            {
+                                "role": "user",
+                                "content": f"{prompt}\n\nContext: {context}"
+                            }
+                        ]
+                        
+                        response = clients['anthropic'].messages.create(
+                            model="claude-3-sonnet-20240229",
+                            messages=messages,
+                            max_tokens=1000
+                        )
+                        return response.content[0].text
+                        
+                    except (AttributeError, TypeError):
+                        # Fallback to older completions API if messages is not available
+                        response = clients['anthropic'].completions.create(
+                            model="claude-2.1",  # Using claude-2.1 for older API
+                            prompt=f"\n\nHuman: {prompt}\n\nContext: {context}\n\nAssistant:",
+                            max_tokens_to_sample=1000,
+                            temperature=0.7
+                        )
+                        return response.completion
+                    
+                elif model_type == "llama":
+                    headers = {
+                        "Authorization": f"Bearer {clients['perplexity_key']}",
+                        "Content-Type": "application/json"
                     }
-                ],
-                max_tokens=4096,
-                temperature=0.7,
-                presence_penalty=0.1,
-                frequency_penalty=0.1
-            )
-            
-            return response.choices[0].message.content
+                    
+                    response = requests.post(
+                        "https://api.perplexity.ai/chat/completions",
+                        headers=headers,
+                        json={
+                            "model": "llama-3.1-sonar-small-128k-online",
+                            "messages": [
+                                {
+                                    "role": "system",
+                                    "content": "You are an expert analyst in the travel industry."
+                                },
+                                {
+                                    "role": "user",
+                                    "content": f"{prompt}\n\nContext: {context}"
+                                }
+                            ],
+                            "max_tokens_to_sample": 1000
+                        },
+                        timeout=30
+                    )
+                    
+                    response.raise_for_status()
+                    return response.json()['choices'][0]['message']['content']
+                    
+                else:  # OpenAI
+                    response = clients['openai'].chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are an expert analyst in the travel industry."
+                            },
+                            {
+                                "role": "user",
+                                "content": f"{prompt}\n\nContext: {context}"
+                            }
+                        ],
+                        max_tokens=4096,
+                        temperature=0.7
+                    )
+                    return response.choices[0].message.content
+                    
+            except Exception as e:
+                if 'overloaded_error' in str(e) or 'Rate limit' in str(e):
+                    if attempt < max_retries - 1:
+                        delay = (base_delay * 2 ** attempt) + random.uniform(0, 1)
+                        logger.warning(f"API overloaded, retrying in {delay:.2f} seconds (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                        continue
+                raise
+                
+        return None
             
     except requests.exceptions.RequestException as e:
         logger.error(f"API request error in get_ai_response: {str(e)}")
