@@ -229,13 +229,19 @@ Create Trip.com strategic plan:
             logger.error(f"Analysis run failed: {str(e)}")
             raise
 
+# Initialize Flask app with correct static file handling
+app = Flask(__name__,
+            static_url_path='',
+            static_folder='static',
+            template_folder='templates')
+
 @app.route('/')
 def index():
-    try:
-        return render_template('index.html')
-    except Exception as e:
-        logger.error(f"Error rendering index: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+    return render_template('index.html')
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(app.static_folder, filename)
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
@@ -244,21 +250,18 @@ def analyze():
         if not data or 'topic' not in data:
             return jsonify({"error": "Missing topic"}), 400
 
-        perplexity_key = os.getenv("PERPLEXITY_API_KEY")
-        anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-        openai_key = os.getenv("OPENAI_API_KEY")
+        keys = {
+            "perplexity": os.getenv("PERPLEXITY_API_KEY"),
+            "anthropic": os.getenv("ANTHROPIC_API_KEY"),
+            "openai": os.getenv("OPENAI_API_KEY")
+        }
 
-        if not all([perplexity_key, anthropic_key, openai_key]):
-            return jsonify({"error": "Missing API keys"}), 500
+        if not all(keys.values()):
+            missing = [k for k, v in keys.items() if not v]
+            return jsonify({"error": f"Missing API keys: {', '.join(missing)}"}), 500
 
-        analyst = OTAIndustryAnalyst(perplexity_key, anthropic_key, openai_key)
+        analyst = OTAIndustryAnalyst(keys["perplexity"], keys["anthropic"], keys["openai"])
         results = analyst.run_analysis()
-
-        filename = f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(filename, "w") as f:
-            json.dump(results, f, indent=2)
-
-        logger.info(f"Analysis saved to {filename}")
         return jsonify(results)
 
     except Exception as e:
@@ -268,18 +271,6 @@ def analyze():
             "message": str(e),
             "timestamp": datetime.now(UTC).isoformat()
         }), 500
-
-@app.errorhandler(404)
-def not_found_error(error):
-    return jsonify({"error": "Not found", "path": request.path}), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    return jsonify({
-        "error": "Internal server error",
-        "message": str(error),
-        "timestamp": datetime.now(UTC).isoformat()
-    }), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5010))
