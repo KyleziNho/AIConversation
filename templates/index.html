@@ -3,24 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Travel Industry Debate Simulator</title>
-    
-    <!-- Add Tailwind CSS -->
+    <title>OTA Strategy Insights Lab</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Add Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- Add Showdown for markdown conversion -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
     
     <style>
-        /* Loading indicator animation */
-        .typing-indicator {
-            display: flex;
-            gap: 4px;
-        }
-        
+        .typing-indicator { display: flex; gap: 4px; }
         .typing-indicator span {
             width: 8px;
             height: 8px;
@@ -28,351 +17,191 @@
             background-color: #4B5563;
             animation: bounce 1.4s infinite ease-in-out;
         }
-        
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-        
         @keyframes bounce {
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1); }
         }
-
-        /* AI Provider Icons */
-        .ai-provider-icon {
-            width: 24px;
-            height: 24px;
-            margin-left: 8px;
-        }
-
-        /* Debate section styling */
-        .debate-section {
-            background: white;
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .expert-response {
-            background: #f8f9fa;
-            border-left: 4px solid #4a5568;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-radius: 0.25rem;
-        }
-
-        .expert-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .response-content {
-            font-size: 1rem;
-            line-height: 1.6;
-            color: #4a5568;
-            white-space: pre-line;
-        }
-
-        .response-content p {
-            margin-bottom: 1rem;
-        }
-
-        .response-content ul, 
-        .response-content ol {
-            margin-left: 1.5rem;
-            margin-bottom: 1rem;
-            list-style-type: disc;
-        }
-
-        .response-content ol {
-            list-style-type: decimal;
-        }
-
-        .response-content li {
-            margin-bottom: 0.5rem;
-        }
-
-        .insight-section {
-            background: #f7fafc;
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        /* Expert cards styling */
-        .expert-card {
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .expert-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Debate container spacing */
-        #debate-container {
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        /* Custom button styling */
-        .btn-primary {
-            @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md transition duration-200;
-        }
-
-        .btn-secondary {
-            @apply bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-md transition duration-200;
-        }
+        .expert-card { transition: transform 0.2s; }
+        .expert-card:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
         <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800 mb-2">AI Travel Industry Debate Simulator</h1>
-            <p class="text-gray-600">Ask a question about the future of online travel agencies and watch AI experts debate</p>
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">OTA Strategy Insights Lab</h1>
+            <p class="text-gray-600">Multi-AI analysis for future-proofing your online travel business</p>
         </header>
 
         <!-- Input Section -->
         <div class="max-w-2xl mx-auto mb-8">
             <div class="bg-white rounded-lg shadow-md p-6">
                 <div class="mb-4">
-                    <label for="debate-topic" class="block text-sm font-medium text-gray-700 mb-2">Enter your question or topic:</label>
-                    <textarea
-                        id="debate-topic"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        rows="3"
-                        placeholder="E.g., How will AI transform the online travel booking experience in the next 5 years?"
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Initial Market Scan Query [Perplexity AI]:
+                    </label>
+                    <textarea 
+                        id="analysis-topic" 
+                        rows="3" 
+                        class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500" 
+                        placeholder="Enter your query about OTA industry trends and uncertainties..."
                     ></textarea>
                 </div>
                 <div class="flex justify-between items-center">
-                    <button
-                        id="start-debate"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md transition duration-200"
-                    >
-                        Begin Debate
+                    <button id="start-analysis" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md">
+                        Begin Analysis
                     </button>
                     <div id="loading-indicator" class="hidden">
-                        <div class="typing-indicator">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                        </div>
-                        <span class="ml-2 text-gray-600">Gathering insights...</span>
+                        <div class="typing-indicator"><span></span><span></span><span></span></div>
+                        <span class="ml-2 text-gray-600">Processing multi-AI analysis...</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Experts Grid -->
+        <!-- Expert Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <div class="expert-card bg-white rounded-lg shadow-md p-6">
                 <div class="flex items-center mb-4">
-                    <i class="fas fa-chart-line text-blue-500 text-2xl mr-3"></i>
-                    <h3 class="font-semibold text-lg">Travel Industry Analyst</h3>
+                    <i class="fas fa-users text-blue-500 text-2xl mr-3"></i>
+                    <h3 class="font-semibold text-lg">Consumer Behavior Expert</h3>
                 </div>
-                <p class="text-gray-600">Analysing market trends and competitive dynamics</p>
-            </div>
-            <div class="expert-card bg-white rounded-lg shadow-md p-6">
-                <div class="flex items-center mb-4">
-                    <i class="fas fa-leaf text-green-500 text-2xl mr-3"></i>
-                    <h3 class="font-semibold text-lg">Sustainability Expert</h3>
-                </div>
-                <p class="text-gray-600">Focusing on environmental impact and sustainable practices</p>
+                <p class="text-gray-600">GPT-4 + Claude-3 Analysis</p>
             </div>
             <div class="expert-card bg-white rounded-lg shadow-md p-6">
                 <div class="flex items-center mb-4">
                     <i class="fas fa-microchip text-purple-500 text-2xl mr-3"></i>
                     <h3 class="font-semibold text-lg">Technology Innovation Specialist</h3>
                 </div>
-                <p class="text-gray-600">Exploring technological advancements and digital transformation</p>
+                <p class="text-gray-600">GPT-4 + Claude-3 Analysis</p>
             </div>
             <div class="expert-card bg-white rounded-lg shadow-md p-6">
                 <div class="flex items-center mb-4">
-                    <i class="fas fa-users text-orange-500 text-2xl mr-3"></i>
-                    <h3 class="font-semibold text-lg">Consumer Behaviour Researcher</h3>
+                    <i class="fas fa-handshake text-green-500 text-2xl mr-3"></i>
+                    <h3 class="font-semibold text-lg">Strategic Partnership Analyst</h3>
                 </div>
-                <p class="text-gray-600">Understanding changing traveler preferences</p>
+                <p class="text-gray-600">GPT-4 + Claude-3 Analysis</p>
             </div>
             <div class="expert-card bg-white rounded-lg shadow-md p-6">
                 <div class="flex items-center mb-4">
-                    <i class="fas fa-dollar-sign text-yellow-500 text-2xl mr-3"></i>
-                    <h3 class="font-semibold text-lg">Economic Strategist</h3>
+                    <i class="fas fa-balance-scale text-red-500 text-2xl mr-3"></i>
+                    <h3 class="font-semibold text-lg">Regulatory Compliance Specialist</h3>
                 </div>
-                <p class="text-gray-600">Analysing market economics and financial implications</p>
+                <p class="text-gray-600">GPT-4 + Claude-3 Analysis</p>
             </div>
             <div class="expert-card bg-white rounded-lg shadow-md p-6">
                 <div class="flex items-center mb-4">
-                    <i class="fas fa-comments text-red-500 text-2xl mr-3"></i>
-                    <h3 class="font-semibold text-lg">Strategic Foresight Moderator</h3>
+                    <i class="fas fa-chart-line text-indigo-500 text-2xl mr-3"></i>
+                    <h3 class="font-semibold text-lg">Economic Specialist</h3>
                 </div>
-                <p class="text-gray-600">Guiding the discussion and ensuring balanced participation</p>
+                <p class="text-gray-600">GPT-4 + Claude-3 Analysis</p>
+            </div>
+            <div class="expert-card bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center mb-4">
+                    <i class="fas fa-comments text-yellow-500 text-2xl mr-3"></i>
+                    <h3 class="font-semibold text-lg">Strategic Moderator</h3>
+                </div>
+                <p class="text-gray-600">Final Synthesis by Claude-3</p>
             </div>
         </div>
 
-        <!-- Debate Results Section -->
-        <div id="debate-results" class="hidden">
+        <!-- Results Section -->
+        <div id="analysis-results" class="hidden">
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 class="text-2xl font-bold mb-4">Industry Research Insights</h2>
-                <div id="research-insights" class="space-y-4"></div>
-            </div>
-
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold">Debate Discussion</h2>
-                    <button
-                        id="save-debate"
-                        class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-md transition duration-200"
-                    >
-                        Save Debate
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Analysis Results</h2>
+                    <button id="save-analysis" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-md">
+                        Save Analysis
                     </button>
                 </div>
-                <div id="debate-container" class="debate-container space-y-6"></div>
+                <div id="analysis-container" class="space-y-6"></div>
             </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const startDebateBtn = document.getElementById('start-debate');
-            const saveDebateBtn = document.getElementById('save-debate');
-            const debateTopicInput = document.getElementById('debate-topic');
+            const startBtn = document.getElementById('start-analysis');
+            const saveBtn = document.getElementById('save-analysis');
+            const topicInput = document.getElementById('analysis-topic');
             const loadingIndicator = document.getElementById('loading-indicator');
-            const debateResults = document.getElementById('debate-results');
-            const researchInsights = document.getElementById('research-insights');
-            const debateContainer = document.getElementById('debate-container');
+            const resultsSection = document.getElementById('analysis-results');
+            const analysisContainer = document.getElementById('analysis-container');
 
-            function getAIProviderIcon(model) {
-                const icons = {
-                    anthropic: `
-                        <div class="flex items-center ml-2" title="Powered by Claude 3 Sonnet">
-                            <svg class="ai-provider-icon" viewBox="0 0 100 100" fill="none">
-                                <circle cx="50" cy="50" r="50" fill="#000"/>
-                                <path d="M75 50C75 63.807 63.807 75 50 75C36.193 75 25 63.807 25 50C25 36.193 36.193 25 50 25C63.807 25 75 36.193 75 50Z" stroke="#FFF" stroke-width="2"/>
-                            </svg>
-                        </div>`,
-                    openai: `
-                        <div class="flex items-center ml-2" title="Powered by GPT-3.5">
-                            <svg class="ai-provider-icon" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="50" fill="#19C37D"/>
-                                <path fill="white" d="M62.5 30C58.5 26 52.5 26 48.5 30L33.5 45C29.5 49 29.5 55 33.5 59C37.5 63 43.5 63 47.5 59L62.5 44C66.5 40 66.5 34 62.5 30Z"/>
-                            </svg>
-                        </div>`,
-                    llama: `
-                        <div class="flex items-center ml-2" title="Powered by Llama 3.1">
-                            <svg class="ai-provider-icon" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="50" fill="#6B46C1"/>
-                                <path fill="white" d="M50 25L65 50L50 75L35 50L50 25Z"/>
-                            </svg>
-                        </div>`,
-                    perplexity: `
-                        <div class="flex items-center ml-2" title="Powered by Perplexity AI">
-                            <svg class="ai-provider-icon" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="50" fill="#6B46C1"/>
-                                <path fill="white" d="M50 25L65 50L50 75L35 50L50 25Z"/>
-                            </svg>
-                        </div>`
-                };
-                
-                return icons[model] || '';
-            }
-
-            startDebateBtn.addEventListener('click', async function() {
-                const topic = debateTopicInput.value.trim();
+            startBtn.addEventListener('click', async function() {
+                const topic = topicInput.value.trim();
                 if (!topic) {
-                    alert('Please enter a debate topic');
+                    alert('Please enter an analysis topic');
                     return;
                 }
 
-                // Show loading state
                 loadingIndicator.classList.remove('hidden');
-                startDebateBtn.disabled = true;
-                debateResults.classList.add('hidden');
+                startBtn.disabled = true;
+                resultsSection.classList.add('hidden');
 
                 try {
-                    const response = await fetch('/api/debate', {
+                    const response = await fetch('/api/analyze', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({ topic: topic })
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ topic })
                     });
 
                     const data = await response.json();
+                    if (!response.ok) throw new Error(data.message);
 
-                    if (!response.ok) {
-                        throw new Error(data.message || 'An error occurred');
-                    }
-
-                    // Display research insights
-                    researchInsights.innerHTML = Object.entries(data.research_insights || {})
-                        .map(([key, value]) => `
-                            <div class="mb-4">
-                                <div class="flex items-center mb-2">
-                                    <h3 class="font-semibold text-lg capitalize">${key.replace('_', ' ')}</h3>
-                                    ${getAIProviderIcon('perplexity')}
+                    analysisContainer.innerHTML = Object.entries(data.analyses)
+                        .map(([specialty, analysis]) => `
+                            <div class="border-l-4 border-blue-500 pl-4 py-4 mb-6">
+                                <h3 class="font-semibold text-lg mb-3">${analysis.role}</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <h4 class="font-medium text-gray-700">Initial Analysis:</h4>
+                                        <div class="mt-2 text-gray-600 whitespace-pre-line">${analysis.initial_analysis}</div>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-700">Follow-up Insights:</h4>
+                                        <div class="mt-2 text-gray-600 whitespace-pre-line">${analysis.followup_analysis}</div>
+                                    </div>
                                 </div>
-                                <p class="text-gray-700">${value}</p>
                             </div>
-                        `)
-                        .join('');
+                        `).join('');
 
-                    // Display debate chain
-                    debateContainer.innerHTML = (data.analysis_chain || [])
-                        .map(entry => `
-                            <div class="border-l-4 border-blue-500 pl-4 py-2">
-                                <div class="flex items-center mb-2">
-                                    <span class="font-semibold text-lg">${entry.expert}</span>
-                                    ${getAIProviderIcon(entry.model)}
-                                </div>
-                                <p class="text-gray-700">${entry.contribution}</p>
-                            </div>
-                        `)
-                        .join('');
-
-                    // Show results
-                    debateResults.classList.remove('hidden');
+                    resultsSection.classList.remove('hidden');
                 } catch (error) {
                     console.error('Error:', error);
                     alert(error.message || 'An error occurred');
                 } finally {
                     loadingIndicator.classList.add('hidden');
-                    startDebateBtn.disabled = false;
+                    startBtn.disabled = false;
                 }
             });
 
-            saveDebateBtn.addEventListener('click', function() {
-                const debateContent = document.getElementById('debate-results').innerHTML;
-                const topic = debateTopicInput.value.trim();
+            saveBtn.addEventListener('click', function() {
+                const content = document.getElementById('analysis-results').innerHTML;
+                const topic = topicInput.value.trim();
                 const blob = new Blob([`
+                    <!DOCTYPE html>
                     <html>
                         <head>
-                            <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-                            <title>Travel Industry Debate - ${topic} - ${new Date().toLocaleDateString()}</title>
+                            <title>OTA Strategy Analysis - ${topic}</title>
+                            <link href="https://cdn.tailwindcss.com" rel="stylesheet">
                         </head>
                         <body class="bg-gray-50 p-8">
                             <div class="container mx-auto">
-                                <h1 class="text-3xl font-bold mb-6">Topic: ${topic}</h1>
-                                ${debateContent}
+                                <h1 class="text-3xl font-bold mb-6">Analysis Topic: ${topic}</h1>
+                                ${content}
                             </div>
                         </body>
                     </html>
                 `], { type: 'text/html' });
                 
-                const url = window.URL.createObjectURL(blob);
+                const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `travel-industry-debate-${new Date().toISOString().split('T')[0]}.html`;
-                document.body.appendChild(a);
+                a.download = `ota-strategy-${new Date().toISOString().split('T')[0]}.html`;
                 a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             });
         });
     </script>
