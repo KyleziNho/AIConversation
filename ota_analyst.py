@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from datetime import datetime, UTC
 import os
 import logging
@@ -9,10 +9,8 @@ import json
 from anthropic import Anthropic
 from openai import OpenAI
 
-app = Flask(__name__,
-            static_url_path='',
-            static_folder='templates',
-            template_folder='templates')
+# Initialize Flask app
+app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -229,49 +227,44 @@ Create Trip.com strategic plan:
             logger.error(f"Analysis run failed: {str(e)}")
             raise
 
-# Initialize Flask app with correct static file handling
-app = Flask(__name__,
-            static_url_path='',
-            static_folder='static',
-            template_folder='templates')
+app = Flask(__name__)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory(app.static_folder, filename)
+# Catch-all route for serving static files and index
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):
+   if path == "":
+       return render_template('index.html')
+   return app.send_static_file(path)
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
-    try:
-        data = request.get_json()
-        if not data or 'topic' not in data:
-            return jsonify({"error": "Missing topic"}), 400
+   try:
+       data = request.get_json()
+       if not data or 'topic' not in data:
+           return jsonify({"error": "Missing topic"}), 400
 
-        keys = {
-            "perplexity": os.getenv("PERPLEXITY_API_KEY"),
-            "anthropic": os.getenv("ANTHROPIC_API_KEY"),
-            "openai": os.getenv("OPENAI_API_KEY")
-        }
+       keys = {
+           "perplexity": os.getenv("PERPLEXITY_API_KEY"),
+           "anthropic": os.getenv("ANTHROPIC_API_KEY"), 
+           "openai": os.getenv("OPENAI_API_KEY")
+       }
 
-        if not all(keys.values()):
-            missing = [k for k, v in keys.items() if not v]
-            return jsonify({"error": f"Missing API keys: {', '.join(missing)}"}), 500
+       if not all(keys.values()):
+           missing = [k for k, v in keys.items() if not v]
+           return jsonify({"error": f"Missing API keys: {', '.join(missing)}"}), 500
 
-        analyst = OTAIndustryAnalyst(keys["perplexity"], keys["anthropic"], keys["openai"])
-        results = analyst.run_analysis()
-        return jsonify(results)
+       analyst = OTAIndustryAnalyst(keys["perplexity"], keys["anthropic"], keys["openai"])
+       results = analyst.run_analysis()
+       return jsonify(results)
 
-    except Exception as e:
-        logger.error(f"Analysis failed: {str(e)}")
-        return jsonify({
-            "error": "Analysis failed",
-            "message": str(e),
-            "timestamp": datetime.now(UTC).isoformat()
-        }), 500
+   except Exception as e:
+       logger.error(f"Analysis failed: {str(e)}")
+       return jsonify({
+           "error": "Analysis failed",
+           "message": str(e),
+           "timestamp": datetime.now(UTC).isoformat()
+       }), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5010))
-    app.run(host='0.0.0.0', port=port, debug=True)
+   app.run(port=5010)
