@@ -2,14 +2,14 @@
     "version": 2,
     "builds": [
         {
-            "src": "app.py",
+            "src": "ota_analyst.py",
             "use": "@vercel/python"
         }
     ],
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "app.py"
+            "dest": "ota_analyst.py"
         }
     ],
     "env": {
