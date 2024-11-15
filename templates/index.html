@@ -121,61 +121,97 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const startBtn = document.getElementById('start-analysis');
-            const saveBtn = document.getElementById('save-analysis');
-            const topicInput = document.getElementById('analysis-topic');
-            const loadingIndicator = document.getElementById('loading-indicator');
-            const resultsSection = document.getElementById('analysis-results');
-            const analysisContainer = document.getElementById('analysis-container');
+    document.addEventListener('DOMContentLoaded', function() {
+        const startBtn = document.getElementById('start-analysis');
+        const saveBtn = document.getElementById('save-analysis');
+        const topicInput = document.getElementById('analysis-topic');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const resultsSection = document.getElementById('analysis-results');
+        const analysisContainer = document.getElementById('analysis-container');
 
-            startBtn.addEventListener('click', async function() {
-                const topic = topicInput.value.trim();
-                if (!topic) {
-                    alert('Please enter an analysis topic');
-                    return;
+        startBtn.addEventListener('click', async function() {
+            const topic = topicInput.value.trim();
+            if (!topic) {
+                alert('Please enter an analysis topic');
+                return;
+            }
+
+            // Setup timeout handling
+            const timeout = 300000; // 5 minutes
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+            loadingIndicator.classList.remove('hidden');
+            startBtn.disabled = true;
+            resultsSection.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    signal: controller.signal,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic })
+                });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
                 }
 
-                loadingIndicator.classList.remove('hidden');
-                startBtn.disabled = true;
-                resultsSection.classList.add('hidden');
+                const data = await response.json();
 
-                try {
-                    const response = await fetch('/api/analyze', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ topic })
-                    });
-
-                    const data = await response.json();
-                    if (!response.ok) throw new Error(data.message);
-
-                    analysisContainer.innerHTML = Object.entries(data.analyses)
-                        .map(([specialty, analysis]) => `
-                            <div class="border-l-4 border-blue-500 pl-4 py-4 mb-6">
-                                <h3 class="font-semibold text-lg mb-3">${analysis.role}</h3>
-                                <div class="space-y-4">
-                                    <div>
-                                        <h4 class="font-medium text-gray-700">Initial Analysis:</h4>
-                                        <div class="mt-2 text-gray-600 whitespace-pre-line">${analysis.initial_analysis}</div>
+                // Display results with improved formatting
+                analysisContainer.innerHTML = Object.entries(data.analyses)
+                    .map(([specialty, analysis]) => `
+                        <div class="border-l-4 border-blue-500 pl-4 py-4 mb-6">
+                            <h3 class="font-semibold text-lg mb-3">${analysis.role}</h3>
+                            <div class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h4 class="font-medium text-gray-700 mb-2">Initial Analysis</h4>
+                                    <div class="prose prose-sm max-w-none text-gray-600">
+                                        ${formatResponse(analysis.initial_analysis)}
                                     </div>
-                                    <div>
-                                        <h4 class="font-medium text-gray-700">Follow-up Insights:</h4>
-                                        <div class="mt-2 text-gray-600 whitespace-pre-line">${analysis.followup_analysis}</div>
+                                </div>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h4 class="font-medium text-gray-700 mb-2">Follow-up Insights</h4>
+                                    <div class="prose prose-sm max-w-none text-gray-600">
+                                        ${formatResponse(analysis.followup_analysis)}
                                     </div>
                                 </div>
                             </div>
-                        `).join('');
+                        </div>
+                    `).join('');
 
-                    resultsSection.classList.remove('hidden');
-                } catch (error) {
+                resultsSection.classList.remove('hidden');
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    alert("Analysis timed out after 5 minutes. Please try again with a more focused query.");
+                } else {
                     console.error('Error:', error);
-                    alert(error.message || 'An error occurred');
-                } finally {
-                    loadingIndicator.classList.add('hidden');
-                    startBtn.disabled = false;
+                    alert("An error occurred during analysis. Please try again.");
                 }
-            });
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                startBtn.disabled = false;
+            }
+        });
+
+        // Helper function to format AI responses
+        function formatResponse(text) {
+            // Convert bullet points to proper HTML
+            text = text.replace(/•/g, '&#8226;');
+            
+            // Add proper spacing for bullet points and numbered lists
+            text = text.replace(/^(\d+\.|[-•])\s*/gm, '<br>$1 ');
+            
+            // Convert newlines to breaks
+            text = text.replace(/\n/g, '<br>');
+            
+            // Add spacing between sections
+            text = text.replace(/<br><br><br>/g, '<br><br>');
+            
+            return text;
+        }
 
             saveBtn.addEventListener('click', function() {
                 const content = document.getElementById('analysis-results').innerHTML;
