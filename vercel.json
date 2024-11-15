@@ -1,12 +1,15 @@
 {
     "version": 2,
-    "functions": {
-      "api/analyze.py": {
-        "maxDuration": 300
+    "builds": [
+      {
+        "src": "ota_analyst.py",
+        "use": "@vercel/python"
       }
-    },
+    ],
     "routes": [
-      { "src": "/api/analyze", "dest": "/api/analyze.py" },
-      { "src": "/(.*)", "dest": "/ota_analyst.py" }
+      {
+        "src": "/(.*)",
+        "dest": "ota_analyst.py"
+      }
     ]
   }
